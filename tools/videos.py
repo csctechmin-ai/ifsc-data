@@ -36,8 +36,8 @@ for cid, name, handle in CHANNELS:
 if ok == 0:
     sys.exit("no feeds could be read; keeping the old file")
 videos.sort(key=lambda v: v["published"], reverse=True)
-os.makedirs(os.path.join(out_dir, "data"), exist_ok=True)
-with open(os.path.join(out_dir, "data", "videos.json"), "w", encoding="utf-8") as f:
+os.makedirs(os.path.join(out_dir, "media"), exist_ok=True)
+with open(os.path.join(out_dir, "media", "videos.json"), "w", encoding="utf-8") as f:
     json.dump({"channels": [{"name": n, "handle": h} for _, n, h in CHANNELS], "videos": videos[:30]},
               f, ensure_ascii=False, separators=(",", ":"))
 print(len(videos), "videos from", ok, "channels")
