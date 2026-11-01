@@ -1,0 +1,32 @@
+name: Update YouTube videos
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/videos.py", ".github/workflows/update-videos.yml"]
+  schedule:
+    - cron: "23 */3 * * *"   # every 3 hours
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ifsc-data
+  cancel-in-progress: false
+
+jobs:
+  videos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the three YouTube channel feeds
+        run: python3 tools/videos.py .
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/videos.json
+          git diff --cached --quiet && echo "No new videos" || (git commit -m "Update videos" && git pull --rebase && git push)
