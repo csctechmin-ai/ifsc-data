@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tools/**", ".github/workflows/**"]
+    paths: ["tools/build.py", ".github/workflows/update-data.yml"]
   schedule:
     - cron: "17 3 5 * *"   # 5th of every month, 08:47 IST
 
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: ifsc-data
+  group: ifsc-data-build
   cancel-in-progress: true
 
 jobs:
@@ -40,4 +40,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A data .nojekyll
-          git diff --cached --quiet && echo "No changes" || (git commit -m "Update IFSC data" && git push)
+          git diff --cached --quiet && echo "No changes" || (git commit -m "Update IFSC data" && git pull --rebase && git push)
