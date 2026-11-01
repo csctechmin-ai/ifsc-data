@@ -1,0 +1,43 @@
+name: Update IFSC data
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/**", ".github/workflows/**"]
+  schedule:
+    - cron: "17 3 5 * *"   # 5th of every month, 08:47 IST
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ifsc-data
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download latest RBI IFSC list (razorpay/ifsc release)
+        run: |
+          TAG=$(curl -fsSL https://api.github.com/repos/razorpay/ifsc/releases/latest | python3 -c "import sys,json;print(json.load(sys.stdin)['tag_name'])")
+          echo "Release: $TAG"
+          curl -fsSL -o IFSC.csv "https://github.com/razorpay/ifsc/releases/download/$TAG/IFSC.csv"
+          curl -fsSL -o banknames.json "https://raw.githubusercontent.com/razorpay/ifsc/$TAG/src/banknames.json"
+          wc -l IFSC.csv
+
+      - name: Build data files
+        run: |
+          python3 tools/build.py IFSC.csv banknames.json .
+          rm -f IFSC.csv banknames.json
+          touch .nojekyll
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data .nojekyll
+          git diff --cached --quiet && echo "No changes" || (git commit -m "Update IFSC data" && git push)
