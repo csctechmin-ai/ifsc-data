@@ -96,13 +96,15 @@ def page_ids(cid, tab):
     return ids[:15]
 
 
-def watch_info(vid):
+def watch_info(vid, cid):
     t = get("https://www.youtube.com/watch?v=" + vid)
+    if f'"channelId":"{cid}"' not in t and f'"externalChannelId":"{cid}"' not in t:
+        return None, "not from this channel" if '"channelId":"' in t else "video page could not be read (YouTube may be asking to sign in)"
     pub = re.search(r'"(?:uploadDate|publishDate)":"([^"]+)"', t) or re.search(r'itemprop="(?:datePublished|uploadDate)" content="([^"]+)"', t)
     title = re.search(r'<meta name="title" content="([^"]*)"', t) or re.search(r"<title>(.*?)(?: - YouTube)?</title>", t, re.S)
     desc = re.search(r'<meta name="description" content="([^"]*)"', t)
     if not pub or not title:
-        return None
+        return None, "no date or title on the video page"
     p = pub.group(1)
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", p):
         p += "T00:00:00+00:00"
@@ -110,8 +112,8 @@ def watch_info(vid):
         p = datetime.datetime.fromisoformat(p.replace("Z", "+00:00")).astimezone(datetime.timezone.utc).isoformat(timespec="seconds")
     except ValueError:
         pass
-    return {"published": p, "title": re.sub(r"\s+", " ", _html.unescape(title.group(1))).strip()[:200],
-            "desc": re.sub(r"\s+", " ", _html.unescape(desc.group(1) if desc else "")).strip()[:220]}
+    return ({"published": p, "title": re.sub(r"\s+", " ", _html.unescape(title.group(1))).strip()[:200],
+            "desc": re.sub(r"\s+", " ", _html.unescape(desc.group(1) if desc else "")).strip()[:220]}, "")
 
 
 MAX_LOOKUPS = 12             # new videos looked up per run (each needs one page fetch)
@@ -145,10 +147,12 @@ for cid, name, handle in CHANNELS:
                     continue
                 lookups += 1
                 try:
-                    info = watch_info(vid)
+                    info, why = watch_info(vid, cid)
                 except Exception as e:
-                    info = None; print(f"{name}: could not read video {vid} ({e})")
-                if info:
+                    info, why = None, str(e)
+                if not info:
+                    print(f"{name}: skipped video {vid} ({why})")
+                else:
                     items.append({"id": vid, "channel": name, "handle": handle, "short": tab == "shorts", **info})
                     print(f"{name}: added {info['published'][:10]} {info['title'][:60]}")
     if worked:
