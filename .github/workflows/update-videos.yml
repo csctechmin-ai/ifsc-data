@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths: ["tools/videos.py", ".github/workflows/update-videos.yml"]
   schedule:
-    - cron: "23 */3 * * *"   # every 3 hours
+    - cron: "23 * * * *"   # every hour
 
 permissions:
   contents: write
@@ -18,10 +18,11 @@ concurrency:
 jobs:
   videos:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Read the three YouTube channel feeds
+      - name: Read the three YouTube channels
         run: python3 tools/videos.py .
 
       - name: Commit changes
